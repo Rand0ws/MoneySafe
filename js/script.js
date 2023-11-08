@@ -1,4 +1,5 @@
 import { convertStringNumber } from './convertStringNumber.js';
+import { OverlayScrollbars } from './overlayscrollbars.esm.min.js';
 
 const financeForm = document.querySelector('.finance__form');
 const financeAmount = document.querySelector('.finance__amount');
@@ -40,3 +41,5 @@ body.addEventListener('click', (e) => {
     report.classList.remove('report__open');
   }
 });
+
+OverlayScrollbars(report, {});

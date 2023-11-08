@@ -1,6 +1,13 @@
 import { convertStringNumber } from './convertStringNumber.js';
 import { OverlayScrollbars } from './overlayscrollbars.esm.min.js';
 
+const API_URL = 'https://gold-tinted-stargazer.glitch.me/api';
+
+const typesOperation = {
+  income: 'доход',
+  expenses: 'расход',
+};
+
 const financeForm = document.querySelector('.finance__form');
 const financeAmount = document.querySelector('.finance__amount');
 
@@ -27,19 +34,96 @@ financeForm.addEventListener('submit', (e) => {
 
 const financeReport = document.querySelector('.finance__report');
 const report = document.querySelector('.report');
-
-financeReport.addEventListener('click', () => {
-  report.classList.add('report__open');
-});
-
 const body = document.body;
+const reportOperationList = document.querySelector('.report__operation-list');
 
-body.addEventListener('click', (e) => {
-  const target = e.target;
+const getData = async (url) => {
+  try {
+    const response = await fetch(`${API_URL}${url}`);
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Ошибка при получении данных:', error);
+    throw error;
+  }
+};
+
+const closeReport = ({ target }) => {
   if (!target.closest('.report') && target !== financeReport || target.closest('.report__close')) {
     report.classList.remove('report__open');
+    body.removeEventListener('click', closeReport);
   }
+};
+
+const openReport = () => {
+  report.classList.add('report__open');
+  body.addEventListener('click', closeReport);
+};
+
+const reformatDate = (dateStr) => {
+  const [year, month, day] = dateStr.split('-');
+
+  return `${day.padStart(2, '0')}.${month.padStart(2, '0')}.${year}`;
+};
+
+const renderReport = (data) => {
+  reportOperationList.textContent = '';
+
+  const reportRows = data.map(({ category, amount, description, date, type }) => {
+    const reportRow = document.createElement('tr');
+
+    reportRow.classList.add('report__row');
+
+    reportRow.innerHTML = `
+      <td class="report__cell">${category}</td>
+      <td class="report__cell">${amount.toLocaleString()}&nbsp;₽</td>
+      <td class="report__cell">${description}</td>
+      <td class="report__cell">${reformatDate(date)}</td>
+      <td class="report__cell">${typesOperation[type]}</td>
+      <td class="report__action-cell">
+        <button class="report__button report__button_table">&#10006;</button>
+      </td>
+    `;
+
+    return reportRow;
+  });
+
+  reportOperationList.append(...reportRows);
+};
+
+financeReport.addEventListener('click', async () => {
+  openReport();
+
+  const data = await getData('/test');
+
+  renderReport(data);
 });
 
 OverlayScrollbars(report, {});
+
+const reportDates = document.querySelector('.report__dates');
+
+reportDates.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const formData = Object.fromEntries(new FormData(reportDates));
+  const searchParams = new URLSearchParams();
+
+  if (formData.startDate) {
+    searchParams.append('startDate', formData.startDate);
+  }
+
+  if (formData.endDate) {
+    searchParams.append('endDate', formData.endDate);
+  }
+
+  const queryString = searchParams.toString();
+  const url = queryString ? `/test?${queryString}` : '/test';
+  const data = await getData(url);
+
+  renderReport(data);
+});

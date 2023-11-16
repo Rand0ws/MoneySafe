@@ -26,16 +26,19 @@ export const animationNumber = (element, number) => {
   const initialNumber = parseInt(element.textContent.replace(/[^0-9.-]+/g, ''));
   const increment = Math.trunc((number - initialNumber) / totalFrame);
 
-  const intervalId = setInterval(() => {
+  const animate = () => {
     currentFrame++;
 
     const newNumber = initialNumber + increment * currentFrame;
 
     element.textContent = `${newNumber.toLocaleString()} ₽`;
 
-    if (currentFrame === totalFrame) {
-      clearInterval(intervalId);
-      element.textContent = `${number.toLocaleString()} ₽`;
+    if (currentFrame < totalFrame) {
+      requestAnimationFrame(animate);
+    } else {
+      element.textContent = `${newNumber.toLocaleString()} ₽`;
     }
-  }, frameDuration);
+  };
+
+  requestAnimationFrame(animate);
 };

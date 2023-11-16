@@ -1,6 +1,7 @@
 import { OverlayScrollbars } from './overlayscrollbars.esm.min.js';
 import { deleteData, getData } from './service.js';
 import { reformatDate } from './helpers.js';
+import { storage } from './storage.js';
 
 const typesOperation = {
   income: 'доход',
@@ -10,6 +11,7 @@ const typesOperation = {
 const body = document.body;
 const report = document.querySelector('.report');
 const financeReport = document.querySelector('.finance__report');
+const reportTable = document.querySelector('.report__table');
 const reportOperationList = document.querySelector('.report__operation-list');
 const reportDates = document.querySelector('.report__dates');
 
@@ -70,7 +72,33 @@ const renderReport = (data) => {
 };
 
 export const reportControl = () => {
-  reportOperationList.addEventListener('click', ({ target }) => {
+  reportTable.addEventListener('click', ({ target }) => {
+    const targetSort = target.closest('[data-sort]');
+
+    if (targetSort) {
+      const sortField = targetSort.dataset.sort;
+
+      renderReport(
+        [...storage.data].sort((a, b) => {
+            if (targetSort.dataset.dir === 'asc') {
+              [a, b] = [b, a];
+            }
+
+            if (sortField === 'amount') {
+              return a[sortField] - b[sortField];
+            }
+
+            return a[sortField] < b[sortField] ? -1 : 1;
+          })
+      );
+
+      if (targetSort.dataset.dir === 'asc') {
+        targetSort.dataset.dir = 'desc';
+      } else {
+        targetSort.dataset.dir = 'asc';
+      }
+    }
+
     const id = target.dataset?.id;
 
     if (id) {
@@ -86,11 +114,12 @@ export const reportControl = () => {
 
     const data = await getData('/finance');
 
+    storage.data = data;
     financeReport.textContent = textContent;
     financeReport.disabled = false;
 
-    openReport();
     renderReport(data);
+    openReport();
   });
 
   reportDates.addEventListener('submit', async (e) => {

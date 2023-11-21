@@ -2,11 +2,15 @@ import { OverlayScrollbars } from './overlayscrollbars.esm.min.js';
 import { deleteData, getData } from './service.js';
 import { reformatDate } from './helpers.js';
 import { storage } from './storage.js';
+import { financeControl } from './financeControl.js';
+import { clearChart, generateChart } from './generateChart.js';
 
 const typesOperation = {
   income: 'доход',
   expenses: 'расход',
 };
+
+let actualData = [];
 
 const body = document.body;
 const report = document.querySelector('.report');
@@ -14,6 +18,7 @@ const financeReport = document.querySelector('.finance__report');
 const reportTable = document.querySelector('.report__table');
 const reportOperationList = document.querySelector('.report__operation-list');
 const reportDates = document.querySelector('.report__dates');
+const generateChartButton = document.querySelector('#generateChartButton');
 
 OverlayScrollbars(report, {});
 
@@ -72,7 +77,7 @@ const renderReport = (data) => {
 };
 
 export const reportControl = () => {
-  reportTable.addEventListener('click', ({ target }) => {
+  reportTable.addEventListener('click', async ({ target }) => {
     const targetSort = target.closest('[data-sort]');
 
     if (targetSort) {
@@ -80,16 +85,16 @@ export const reportControl = () => {
 
       renderReport(
         [...storage.data].sort((a, b) => {
-            if (targetSort.dataset.dir === 'asc') {
-              [a, b] = [b, a];
-            }
+          if (targetSort.dataset.dir === 'asc') {
+            [a, b] = [b, a];
+          }
 
-            if (sortField === 'amount') {
-              return a[sortField] - b[sortField];
-            }
+          if (sortField === 'amount') {
+            return a[sortField] - b[sortField];
+          }
 
-            return a[sortField] < b[sortField] ? -1 : 1;
-          })
+          return a[sortField] < b[sortField] ? -1 : 1;
+        })
       );
 
       if (targetSort.dataset.dir === 'asc') {
@@ -102,7 +107,12 @@ export const reportControl = () => {
     const id = target.dataset?.id;
 
     if (id) {
-      deleteData(`/finance/${id}`);
+      await deleteData(`/finance/${id}`);
+
+      const reportRow = target.closest('.report__row');
+      reportRow.remove();
+      financeControl();
+      clearChart();
     }
   });
 
@@ -112,13 +122,13 @@ export const reportControl = () => {
     financeReport.textContent = 'Загрузка';
     financeReport.disabled = true;
 
-    const data = await getData('/finance');
+    actualData = await getData('/finance');
 
-    storage.data = data;
+    storage.data = actualData;
     financeReport.textContent = textContent;
     financeReport.disabled = false;
 
-    renderReport(data);
+    renderReport(actualData);
     openReport();
   });
 
@@ -138,8 +148,14 @@ export const reportControl = () => {
 
     const queryString = searchParams.toString();
     const url = queryString ? `/finance?${queryString}` : '/finance';
-    const data = await getData(url);
 
-    renderReport(data);
+    actualData = await getData(url);
+
+    renderReport(actualData);
+    clearChart();
   });
 };
+
+generateChartButton.addEventListener('click', () => {
+  generateChart(actualData);
+});
